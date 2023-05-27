@@ -20,6 +20,11 @@ func middlewareCors(next http.Handler) http.Handler {
 func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/", http.FileServer(http.Dir(".")))
+	mux.HandleFunc("/healthz", func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Add("Content-Type", "text/plain; charset=utf-8")
+		writer.WriteHeader(200)
+		writer.Write([]byte("OK"))
+	})
 	corsMux := middlewareCors(mux)
 	http.ListenAndServe(":8080", corsMux)
 }
