@@ -48,16 +48,18 @@ func middlewareLog(next http.Handler) http.Handler {
 func main() {
 	var apiCfg apiConfig
 	r := chi.NewRouter()
-	r.Post("/", func(writer http.ResponseWriter, request *http.Request) {
-		writer.WriteHeader(http.StatusMethodNotAllowed)
-	})
-	r.Mount("/", apiCfg.middlewareMetricsInc(http.FileServer(http.Dir("."))))
-	r.Get("/metrics", apiCfg.showHits)
-	r.Get("/healthz", func(writer http.ResponseWriter, request *http.Request) {
+	rApi := chi.NewRouter()
+	rApi.Get("/metrics", apiCfg.showHits)
+	rApi.Get("/healthz", func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		writer.WriteHeader(http.StatusOK)
 		writer.Write([]byte("OK"))
 	})
+	r.Post("/", func(writer http.ResponseWriter, request *http.Request) {
+		writer.WriteHeader(http.StatusMethodNotAllowed)
+	})
+	r.Mount("/", apiCfg.middlewareMetricsInc(http.FileServer(http.Dir("."))))
+	r.Mount("/api", rApi)
 	corsMux := middlewareCors(r)
 	logMux := middlewareLog(corsMux)
 	http.ListenAndServe(":8080", logMux)
