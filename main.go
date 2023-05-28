@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type apiConfig struct {
@@ -45,15 +47,18 @@ func middlewareLog(next http.Handler) http.Handler {
 
 func main() {
 	var apiCfg apiConfig
-	mux := http.NewServeMux()
-	mux.Handle("/", apiCfg.middlewareMetricsInc(http.FileServer(http.Dir("."))))
-	mux.HandleFunc("/metrics", apiCfg.showHits)
-	mux.HandleFunc("/healthz", func(writer http.ResponseWriter, request *http.Request) {
+	r := chi.NewRouter()
+	r.Post("/", func(writer http.ResponseWriter, request *http.Request) {
+		writer.WriteHeader(http.StatusMethodNotAllowed)
+	})
+	r.Mount("/", apiCfg.middlewareMetricsInc(http.FileServer(http.Dir("."))))
+	r.Get("/metrics", apiCfg.showHits)
+	r.Get("/healthz", func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		writer.WriteHeader(http.StatusOK)
 		writer.Write([]byte("OK"))
 	})
-	corsMux := middlewareCors(mux)
+	corsMux := middlewareCors(r)
 	logMux := middlewareLog(corsMux)
 	http.ListenAndServe(":8080", logMux)
 }
